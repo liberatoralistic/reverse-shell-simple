@@ -1,2 +1,1 @@
-# reverse-shell-simple
-Just for me so i can GIT
+extremely simple python 3 remote shell
